@@ -6,6 +6,7 @@ public class Butler {
         System.out.println(line);
         System.out.println(" Hello! I'm Butler");
         System.out.println(" What can I do for you?");
+        System.out.println(line);
 
         Scanner sc = new Scanner(System.in);
         while (true) {
