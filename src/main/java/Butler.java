@@ -41,9 +41,43 @@ public class Butler {
                 System.out.println(" OK, I've marked this task as not done yet:");
                 System.out.println("   " + tasks[idx].toString());
                 System.out.println(line);
+            } else if (input.startsWith("todo ")) {
+                String desc = input.substring(5);
+                Task t = new Todo(desc);
+                tasks[taskCount++] = t;
+                System.out.println(line);
+                System.out.println(" Got it. I've added this task:");
+                System.out.println("   " + t.toString());
+                System.out.println(" Now you have " + taskCount + " tasks in the list.");
+                System.out.println(line);
+            } else if (input.startsWith("deadline ")) {
+                // format: deadline <desc> /by <by>
+                String rest = input.substring(9);
+                String[] parts = rest.split(" /by ");
+                Task t = new Deadline(parts[0], parts[1]);
+                tasks[taskCount++] = t;
+                System.out.println(line);
+                System.out.println(" Got it. I've added this task:");
+                System.out.println("   " + t.toString());
+                System.out.println(" Now you have " + taskCount + " tasks in the list.");
+                System.out.println(line);
+            } else if (input.startsWith("event ")) {
+                // format: event <desc> /from <from> /to <to>
+                String rest = input.substring(6);
+                String[] p1 = rest.split(" /from ");
+                String desc = p1[0];
+                String[] p2 = p1[1].split(" /to ");
+                Task t = new Event(desc, p2[0], p2[1]);
+                tasks[taskCount++] = t;
+                System.out.println(line);
+                System.out.println(" Got it. I've added this task:");
+                System.out.println("   " + t.toString());
+                System.out.println(" Now you have " + taskCount + " tasks in the list.");
+                System.out.println(line);
             } else {
-                tasks[taskCount] = new Task(input);
-                taskCount++;
+                // default: add as plain Todo (optional; remove if you prefer strict commands)
+                Task t = new Todo(input);
+                tasks[taskCount++] = t;
                 System.out.println(line);
                 System.out.println(" added: " + input);
                 System.out.println(line);
