@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Butler {
@@ -5,8 +6,7 @@ public class Butler {
     private static final String LINE = "____________________________________________________________";
 
     // ---------- State ----------
-    private static final Task[] tasks = new Task[100];
-    private static int taskCount = 0;
+    private static final ArrayList<Task> tasks = new ArrayList<>();
 
     // ---------- Entry Point ----------
     public static void main(String[] args) {
@@ -55,6 +55,10 @@ public class Butler {
                             handleEvent(argsLine);
                             break;
 
+                        case "delete":
+                            handleDelete(argsLine);
+                            break;
+
                         default:
                             throw new ButlerException("Sorry, I don't recognize that command.");
                     }
@@ -70,14 +74,12 @@ public class Butler {
     private static void handleTodo(String argsLine) throws ButlerException {
         String desc = argsLine.trim();
         ensureNonEmpty(desc, "Please tell me what the todo is about.");
-        ensureCapacity();
         Task t = new Todo(desc);
-        addTask(t);
+        tasks.add(t);
         printAdded(t);
     }
 
     private static void handleDeadline(String argsLine) throws ButlerException {
-        // Format: <desc> /by <by>
         ensureContains(argsLine, " /by ", "A deadline needs a '/by <time>' part.");
         String[] parts = splitOnce(argsLine, " /by ");
         String desc = parts[0].trim();
@@ -86,14 +88,12 @@ public class Butler {
         ensureNonEmpty(desc, "Deadline description cannot be empty.");
         ensureNonEmpty(by, "Tell me when it's due using '/by <time>'.");
 
-        ensureCapacity();
         Task t = new Deadline(desc, by);
-        addTask(t);
+        tasks.add(t);
         printAdded(t);
     }
 
     private static void handleEvent(String argsLine) throws ButlerException {
-        // Format: <desc> /from <from> /to <to>
         ensureContains(argsLine, " /from ", "An event needs '/from <start>' and '/to <end>'.");
         String[] p1 = splitOnce(argsLine, " /from ");
         String desc = p1[0].trim();
@@ -108,29 +108,41 @@ public class Butler {
         ensureNonEmpty(from, "Please specify the start time after '/from'.");
         ensureNonEmpty(to, "Please specify the end time after '/to'.");
 
-        ensureCapacity();
         Task t = new Event(desc, from, to);
-        addTask(t);
+        tasks.add(t);
         printAdded(t);
     }
 
     private static void handleMark(String argsLine) throws ButlerException {
         int idx = parseIndex(argsLine);
         ensureIndexInRange(idx, "I can't find that task number.");
-        tasks[idx - 1].mark();
+        Task t = tasks.get(idx - 1);
+        t.mark();
         printBox(
                 " Nice! I've marked this task as done:",
-                "   " + tasks[idx - 1]
+                "   " + t
         );
     }
 
     private static void handleUnmark(String argsLine) throws ButlerException {
         int idx = parseIndex(argsLine);
         ensureIndexInRange(idx, "That task number is not in the list.");
-        tasks[idx - 1].unmark();
+        Task t = tasks.get(idx - 1);
+        t.unmark();
         printBox(
                 " OK, I've marked this task as not done yet:",
-                "   " + tasks[idx - 1]
+                "   " + t
+        );
+    }
+
+    private static void handleDelete(String argsLine) throws ButlerException {
+        int idx = parseIndex(argsLine);
+        ensureIndexInRange(idx, "That task number is not in the list.");
+        Task removed = tasks.remove(idx - 1);
+        printBox(
+                " Noted. I've removed this task:",
+                "   " + removed,
+                " Now you have " + tasks.size() + " tasks in the list."
         );
     }
 
@@ -145,8 +157,8 @@ public class Butler {
     private static void printList() {
         System.out.println(LINE);
         System.out.println(" Here are the tasks in your list:");
-        for (int i = 0; i < taskCount; i++) {
-            System.out.println(" " + (i + 1) + "." + tasks[i]);
+        for (int i = 0; i < tasks.size(); i++) {
+            System.out.println(" " + (i + 1) + "." + tasks.get(i));
         }
         System.out.println(LINE);
     }
@@ -155,21 +167,11 @@ public class Butler {
         System.out.println(LINE);
         System.out.println(" Got it. I've added this task:");
         System.out.println("   " + t);
-        System.out.println(" Now you have " + taskCount + " tasks in the list.");
+        System.out.println(" Now you have " + tasks.size() + " tasks in the list.");
         System.out.println(LINE);
     }
 
     // ---------- Small Utilities ----------
-
-    private static void addTask(Task t) {
-        tasks[taskCount++] = t;
-    }
-
-    private static void ensureCapacity() throws ButlerException {
-        if (taskCount >= tasks.length) {
-            throw new ButlerException("I've reached my 100-task limit.");
-        }
-    }
 
     private static void ensureNonEmpty(String s, String msg) throws ButlerException {
         if (s == null || s.isEmpty()) throw new ButlerException(msg);
@@ -188,7 +190,7 @@ public class Butler {
     }
 
     private static void ensureIndexInRange(int idx, String msg) throws ButlerException {
-        if (idx < 1 || idx > taskCount) throw new ButlerException(msg);
+        if (idx < 1 || idx > tasks.size()) throw new ButlerException(msg);
     }
 
     private static String[] splitOnce(String s, String delim) {
