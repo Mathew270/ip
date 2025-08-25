@@ -1,5 +1,9 @@
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 public class Butler {
     // ---------- Constants ----------
@@ -7,7 +11,7 @@ public class Butler {
 
     // ---------- State ----------
     private static final ArrayList<Task> tasks = new ArrayList<>();
-    private static final Storage storage = new Storage(); // NEW
+    private static final Storage storage = new Storage(); // Level 7 persistence
 
     // ---------- Commands Enum ----------
     private enum Command {
@@ -35,7 +39,7 @@ public class Butler {
                 " What can I do for you?"
         );
 
-        // Load tasks from disk (NEW)
+        // Load tasks from disk
         tasks.addAll(storage.load());
 
         try (Scanner sc = new Scanner(System.in)) {
@@ -44,7 +48,6 @@ public class Butler {
                 if (input.isEmpty()) continue;
 
                 try {
-                    // Extract command (first word) and the rest as arguments
                     String[] parts = splitCommand(input);
                     Command cmd = Command.from(parts[0]);
                     String argsLine = parts[1];
@@ -100,22 +103,22 @@ public class Butler {
         Task t = new Todo(desc);
         tasks.add(t);
         printAdded(t);
-        storage.save(tasks); // SAVE
+        storage.save(tasks);
     }
 
     private static void handleDeadline(String argsLine) throws ButlerException {
-        ensureContains(argsLine, " /by ", "A deadline needs a '/by <time>' part.");
+        ensureContains(argsLine, " /by ", "A deadline needs a '/by <date>' part (yyyy-MM-dd).");
         String[] parts = splitOnce(argsLine, " /by ");
         String desc = parts[0].trim();
-        String by = parts[1].trim();
+        String byRaw = parts[1].trim();
 
         ensureNonEmpty(desc, "Deadline description cannot be empty.");
-        ensureNonEmpty(by, "Tell me when it's due using '/by <time>'.");
+        LocalDate by = parseLocalDate(byRaw); // yyyy-MM-dd only (minimal)
 
         Task t = new Deadline(desc, by);
         tasks.add(t);
         printAdded(t);
-        storage.save(tasks); // SAVE
+        storage.save(tasks);
     }
 
     private static void handleEvent(String argsLine) throws ButlerException {
@@ -126,17 +129,17 @@ public class Butler {
 
         ensureContains(afterFrom, " /to ", "Please include the end time using '/to <end>'.");
         String[] p2 = splitOnce(afterFrom, " /to ");
-        String from = p2[0].trim();
-        String to = p2[1].trim();
+        String fromRaw = p2[0].trim();
+        String toRaw = p2[1].trim();
 
         ensureNonEmpty(desc, "Event description cannot be empty.");
-        ensureNonEmpty(from, "Please specify the start time after '/from'.");
-        ensureNonEmpty(to, "Please specify the end time after '/to'.");
+        LocalDateTime from = parseLocalDateTime(fromRaw);
+        LocalDateTime to = parseLocalDateTime(toRaw);
 
         Task t = new Event(desc, from, to);
         tasks.add(t);
         printAdded(t);
-        storage.save(tasks); // SAVE
+        storage.save(tasks);
     }
 
     private static void handleMark(String argsLine) throws ButlerException {
@@ -144,11 +147,8 @@ public class Butler {
         ensureIndexInRange(idx, "I can't find that task number.");
         Task t = tasks.get(idx - 1);
         t.mark();
-        printBox(
-                " Nice! I've marked this task as done:",
-                "   " + t
-        );
-        storage.save(tasks); // SAVE
+        printBox(" Nice! I've marked this task as done:", "   " + t);
+        storage.save(tasks);
     }
 
     private static void handleUnmark(String argsLine) throws ButlerException {
@@ -156,23 +156,47 @@ public class Butler {
         ensureIndexInRange(idx, "That task number is not in the list.");
         Task t = tasks.get(idx - 1);
         t.unmark();
-        printBox(
-                " OK, I've marked this task as not done yet:",
-                "   " + t
-        );
-        storage.save(tasks); // SAVE
+        printBox(" OK, I've marked this task as not done yet:", "   " + t);
+        storage.save(tasks);
     }
 
     private static void handleDelete(String argsLine) throws ButlerException {
         int idx = parseIndex(argsLine);
         ensureIndexInRange(idx, "That task number is not in the list.");
         Task removed = tasks.remove(idx - 1);
-        printBox(
-                " Noted. I've removed this task:",
-                "   " + removed,
-                " Now you have " + tasks.size() + " tasks in the list."
-        );
-        storage.save(tasks); // SAVE
+        printBox(" Noted. I've removed this task:", "   " + removed,
+                " Now you have " + tasks.size() + " tasks in the list.");
+        storage.save(tasks);
+    }
+
+    // ---------- Date Parsing Helpers (Level 8) ----------
+
+    private static LocalDate parseLocalDate(String s) throws ButlerException {
+        // Minimal requirement: accept yyyy-MM-dd only
+        try {
+            return LocalDate.parse(s); // ISO yyyy-MM-dd
+        } catch (DateTimeParseException e) {
+            throw new ButlerException("Please use date format yyyy-MM-dd (e.g., 2019-10-15).");
+        }
+    }
+
+    private static LocalDateTime parseLocalDateTime(String s) throws ButlerException {
+        // Accept either "yyyy-MM-dd HHmm" or ISO "yyyy-MM-dd'T'HH:mm"
+        DateTimeFormatter f1 = DateTimeFormatter.ofPattern("yyyy-MM-dd HHmm");
+        try {
+            if (s.contains("T")) {
+                return LocalDateTime.parse(s); // ISO-8601 like 2019-10-15T18:00
+            } else if (s.contains(":")) {
+                // If colon present but no 'T', try "yyyy-MM-dd HH:mm"
+                DateTimeFormatter f2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                return LocalDateTime.parse(s, f2);
+            } else {
+                // Try "yyyy-MM-dd HHmm"
+                return LocalDateTime.parse(s, f1);
+            }
+        } catch (DateTimeParseException e) {
+            throw new ButlerException("Please use datetime format 'yyyy-MM-dd HHmm' or ISO 'yyyy-MM-ddTHH:mm'.");
+        }
     }
 
     // ---------- Printing Helpers ----------
