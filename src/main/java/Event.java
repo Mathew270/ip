@@ -8,9 +8,24 @@ public class Event extends Task {
         this.to = to;
     }
 
+    public String getFrom() { return from; }
+    public String getTo() { return to; }
+
     @Override
-    public String typeIcon() {
-        return "[E]";
+    public String typeIcon() { return "[E]"; }
+
+    @Override
+    public String typeCode() { return "E"; }
+
+    @Override
+    public String serialize() {
+        return String.join("|",
+                typeCode(),
+                isDone ? "1" : "0",
+                description,
+                from,
+                to
+        );
     }
 
     @Override
@@ -19,3 +34,4 @@ public class Event extends Task {
                 + " (from: " + from + " to: " + to + ")";
     }
 }
+
