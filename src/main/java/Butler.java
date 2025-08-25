@@ -8,6 +8,25 @@ public class Butler {
     // ---------- State ----------
     private static final ArrayList<Task> tasks = new ArrayList<>();
 
+    // ---------- Commands Enum ----------
+    private enum Command {
+        BYE, LIST, MARK, UNMARK, TODO, DEADLINE, EVENT, DELETE, UNKNOWN;
+
+        static Command from(String s) {
+            switch (s) {
+            case "bye": return BYE;
+            case "list": return LIST;
+            case "mark": return MARK;
+            case "unmark": return UNMARK;
+            case "todo": return TODO;
+            case "deadline": return DEADLINE;
+            case "event": return EVENT;
+            case "delete": return DELETE;
+            default: return UNKNOWN;
+            }
+        }
+    }
+
     // ---------- Entry Point ----------
     public static void main(String[] args) {
         printBox(
@@ -23,44 +42,44 @@ public class Butler {
                 try {
                     // Extract command (first word) and the rest as arguments
                     String[] parts = splitCommand(input);
-                    String cmd = parts[0];
+                    Command cmd = Command.from(parts[0]);
                     String argsLine = parts[1];
 
                     switch (cmd) {
-                        case "bye":
-                            printBox(" Bye. Hope to see you again soon!");
-                            return;
+                    case BYE:
+                        printBox(" Bye. Hope to see you again soon!");
+                        return;
 
-                        case "list":
-                            printList();
-                            break;
+                    case LIST:
+                        printList();
+                        break;
 
-                        case "mark":
-                            handleMark(argsLine);
-                            break;
+                    case MARK:
+                        handleMark(argsLine);
+                        break;
 
-                        case "unmark":
-                            handleUnmark(argsLine);
-                            break;
+                    case UNMARK:
+                        handleUnmark(argsLine);
+                        break;
 
-                        case "todo":
-                            handleTodo(argsLine);
-                            break;
+                    case TODO:
+                        handleTodo(argsLine);
+                        break;
 
-                        case "deadline":
-                            handleDeadline(argsLine);
-                            break;
+                    case DEADLINE:
+                        handleDeadline(argsLine);
+                        break;
 
-                        case "event":
-                            handleEvent(argsLine);
-                            break;
+                    case EVENT:
+                        handleEvent(argsLine);
+                        break;
 
-                        case "delete":
-                            handleDelete(argsLine);
-                            break;
+                    case DELETE:
+                        handleDelete(argsLine);
+                        break;
 
-                        default:
-                            throw new ButlerException("Sorry, I don't recognize that command.");
+                    default:
+                        throw new ButlerException("Sorry, I don't recognize that command.");
                     }
                 } catch (ButlerException ex) {
                     printBox(" " + ex.getMessage());
