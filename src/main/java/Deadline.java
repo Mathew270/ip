@@ -1,12 +1,14 @@
-public class Deadline extends Task {
-    private final String by;
+import java.time.LocalDate;
 
-    public Deadline(String description, String by) {
+public class Deadline extends Task {
+    private final LocalDate by;
+
+    public Deadline(String description, LocalDate by) {
         super(description);
         this.by = by;
     }
 
-    public String getBy() { return by; }
+    public LocalDate getBy() { return by; }
 
     @Override
     public String typeIcon() { return "[D]"; }
@@ -16,17 +18,18 @@ public class Deadline extends Task {
 
     @Override
     public String serialize() {
+        // persist in ISO-8601 for portability
         return String.join("|",
                 typeCode(),
                 isDone ? "1" : "0",
                 description,
-                by
+                by.toString() // yyyy-MM-dd
         );
     }
 
     @Override
     public String toString() {
-        return typeIcon() + statusIcon() + " " + description + " (by: " + by + ")";
+        return typeIcon() + statusIcon() + " " + description
+                + " (by: " + by.format(DISPLAY_DATE) + ")";
     }
 }
-
