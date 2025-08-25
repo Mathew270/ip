@@ -6,9 +6,22 @@ public class Deadline extends Task {
         this.by = by;
     }
 
+    public String getBy() { return by; }
+
     @Override
-    public String typeIcon() {
-        return "[D]";
+    public String typeIcon() { return "[D]"; }
+
+    @Override
+    public String typeCode() { return "D"; }
+
+    @Override
+    public String serialize() {
+        return String.join("|",
+                typeCode(),
+                isDone ? "1" : "0",
+                description,
+                by
+        );
     }
 
     @Override
@@ -16,3 +29,4 @@ public class Deadline extends Task {
         return typeIcon() + statusIcon() + " " + description + " (by: " + by + ")";
     }
 }
+

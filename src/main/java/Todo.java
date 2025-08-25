@@ -4,7 +4,17 @@ public class Todo extends Task {
     }
 
     @Override
-    public String typeIcon() {
-        return "[T]";
+    public String typeIcon() { return "[T]"; }
+
+    @Override
+    public String typeCode() { return "T"; }
+
+    @Override
+    public String serialize() {
+        return String.join("|",
+                typeCode(),
+                isDone ? "1" : "0",
+                description
+        );
     }
 }

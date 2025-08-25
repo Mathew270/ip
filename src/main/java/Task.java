@@ -1,4 +1,4 @@
-public class Task {
+public abstract class Task {
     protected final String description;
     protected boolean isDone;
 
@@ -14,11 +14,20 @@ public class Task {
         return isDone ? "[X]" : "[ ]";
     }
 
-    public String typeIcon() { return "[?]"; }
+    public String getDescription() { return description; }
+    public boolean isDone() { return isDone; }
+
+    // Polymorphic type code (for file format)
+    public abstract String typeCode();
+
+    // Serialize to line
+    public abstract String serialize();
 
     @Override
     public String toString() {
         return typeIcon() + statusIcon() + " " + description;
     }
-}
 
+    // For subclasses to provide icon
+    public abstract String typeIcon();
+}
