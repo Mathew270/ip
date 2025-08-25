@@ -9,7 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Storage {
-    private final Path dataPath = Paths.get("data", "butler.txt"); // ./data/butler.txt
+    private final Path dataPath;
+
+    public Storage(String filePath) {
+        this.dataPath = Paths.get(filePath); // e.g., "data/butler.txt"
+    }
 
     public ArrayList<Task> load() {
         ArrayList<Task> loaded = new ArrayList<>();
@@ -23,7 +27,7 @@ public class Storage {
                 if (line.isEmpty()) continue;
 
                 String[] p = line.split("\\s*\\|\\s*");
-                if (p.length < 3) continue; // skip malformed
+                if (p.length < 3) continue; // skip malformed lines
 
                 String type = p[0];
                 boolean done = "1".equals(p[1]);
@@ -32,30 +36,24 @@ public class Storage {
                 switch (type) {
                 case "T": {
                     // T|done|desc
-                    if (p.length >= 3) {
-                        t = new Todo(p[2]);
-                    }
+                    t = new Todo(p[2]);
                     break;
                 }
                 case "D": {
                     // D|done|desc|yyyy-MM-dd
-                    if (p.length >= 4) {
-                        LocalDate by = LocalDate.parse(p[3]); // ISO
-                        t = new Deadline(p[2], by);
-                    }
+                    LocalDate by = LocalDate.parse(p[3]);
+                    t = new Deadline(p[2], by);
                     break;
                 }
                 case "E": {
-                    // E|done|desc|yyyy-MM-ddTHH:mm[:ss]|yyyy-MM-ddTHH:mm[:ss]
-                    if (p.length >= 5) {
-                        LocalDateTime from = LocalDateTime.parse(p[3]); // ISO
-                        LocalDateTime to   = LocalDateTime.parse(p[4]);
-                        t = new Event(p[2], from, to);
-                    }
+                    // E|done|desc|fromISO|toISO
+                    LocalDateTime from = LocalDateTime.parse(p[3]);
+                    LocalDateTime to   = LocalDateTime.parse(p[4]);
+                    t = new Event(p[2], from, to);
                     break;
                 }
                 default:
-                    // unknown line, skip
+                    // unknown line -> skip
                 }
                 if (t != null && done) t.mark();
                 if (t != null) loaded.add(t);
@@ -81,3 +79,4 @@ public class Storage {
         }
     }
 }
+
