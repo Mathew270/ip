@@ -7,6 +7,7 @@ public class Butler {
 
     // ---------- State ----------
     private static final ArrayList<Task> tasks = new ArrayList<>();
+    private static final Storage storage = new Storage(); // NEW
 
     // ---------- Commands Enum ----------
     private enum Command {
@@ -33,6 +34,9 @@ public class Butler {
                 " Hello! I'm Butler",
                 " What can I do for you?"
         );
+
+        // Load tasks from disk (NEW)
+        tasks.addAll(storage.load());
 
         try (Scanner sc = new Scanner(System.in)) {
             while (sc.hasNextLine()) {
@@ -96,6 +100,7 @@ public class Butler {
         Task t = new Todo(desc);
         tasks.add(t);
         printAdded(t);
+        storage.save(tasks); // SAVE
     }
 
     private static void handleDeadline(String argsLine) throws ButlerException {
@@ -110,6 +115,7 @@ public class Butler {
         Task t = new Deadline(desc, by);
         tasks.add(t);
         printAdded(t);
+        storage.save(tasks); // SAVE
     }
 
     private static void handleEvent(String argsLine) throws ButlerException {
@@ -130,6 +136,7 @@ public class Butler {
         Task t = new Event(desc, from, to);
         tasks.add(t);
         printAdded(t);
+        storage.save(tasks); // SAVE
     }
 
     private static void handleMark(String argsLine) throws ButlerException {
@@ -141,6 +148,7 @@ public class Butler {
                 " Nice! I've marked this task as done:",
                 "   " + t
         );
+        storage.save(tasks); // SAVE
     }
 
     private static void handleUnmark(String argsLine) throws ButlerException {
@@ -152,6 +160,7 @@ public class Butler {
                 " OK, I've marked this task as not done yet:",
                 "   " + t
         );
+        storage.save(tasks); // SAVE
     }
 
     private static void handleDelete(String argsLine) throws ButlerException {
@@ -163,6 +172,7 @@ public class Butler {
                 "   " + removed,
                 " Now you have " + tasks.size() + " tasks in the list."
         );
+        storage.save(tasks); // SAVE
     }
 
     // ---------- Printing Helpers ----------
