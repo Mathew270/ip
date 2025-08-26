@@ -176,32 +176,3 @@ public class Butler {
         new Butler(FILE_PATH).run();
     }
 }
-
-/*
- ======================
- Butler Error Handling
- ======================
- 1. Empty description:
-    - "todo" with nothing after → "Please tell me what the todo is about."\
-    - "deadline" with no desc or /by part → error
-    - "event" with no desc, /from, or /to parts → error
-
- 2. Missing keywords:
-    - deadline without "/by" → "A deadline needs a '/by <time>' part."
-    - event without "/from" or "/to" → clear error messages
-
- 3. Empty values after keywords:
-    - "/by" but nothing after → "Tell me when it's due..."
-    - "/from" with no time → "Please specify the start time..."
-    - "/to" with no time → "Please specify the end time..."
-
- 4. Invalid indices:
-    - mark/unmark with non-numeric → "Please provide a valid task number."
-    - mark/unmark with out-of-range index → "That task number is not in the list."
-
- 5. Unknown command:
-    - Any command not recognized (e.g., "blah") → "Sorry, I don't recognize that command."
-
- 6. Storage limit:
-    - More than 100 tasks → "I've reached my 100-task limit."
- */
