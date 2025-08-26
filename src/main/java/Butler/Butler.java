@@ -1,3 +1,5 @@
+package Butler;
+
 public class Butler {
     // ---------- Constants ----------
     private static final String FILE_PATH = "data/butler.txt";

@@ -1,3 +1,5 @@
+package Butler;
+
 public class Checks {
     private Checks() {} // utility class
 
