@@ -11,7 +11,7 @@ public class Butler {
 
     // ---------- Commands Enum ----------
     private enum Command {
-        BYE, LIST, MARK, UNMARK, TODO, DEADLINE, EVENT, DELETE, UNKNOWN;
+        BYE, LIST, MARK, UNMARK, TODO, DEADLINE, EVENT, DELETE, FIND, UNKNOWN;
 
         static Command from(String s) {
             switch (s) {
@@ -23,6 +23,7 @@ public class Butler {
             case "deadline": return DEADLINE;
             case "event": return EVENT;
             case "delete": return DELETE;
+            case "find": return FIND;
             default: return UNKNOWN;
             }
         }
@@ -85,6 +86,10 @@ public class Butler {
 
                 case DELETE:
                     handleDelete(argsLine);
+                    break;
+
+                case FIND:
+                    handleFind(argsLine);
                     break;
 
                 default:
@@ -170,6 +175,11 @@ public class Butler {
                 " Now you have " + tasks.size() + " tasks in the list."
         );
         storage.save(tasks.all());
+    }
+
+    private void handleFind(String argsLine) throws ButlerException {
+        Checks.ensureNonEmpty(argsLine, "Please provide a keyword to search.");
+        tasks.find(argsLine.trim(), ui);
     }
 
     public static void main(String[] args) {

@@ -44,5 +44,22 @@ public class TaskList {
         }
         ui.showLine();
     }
+
+    public void find(String keyword, Ui ui) {
+        ui.showLine();
+        System.out.println(" Here are the matching tasks in your list:");
+        int count = 0;
+        for (int i = 0; i < tasks.size(); i++) {
+            Task t = tasks.get(i);
+            if (t.description.contains(keyword)) {
+                count++;
+                System.out.println(" " + count + "." + t);
+            }
+        }
+        if (count == 0) {
+            System.out.println(" (no matching tasks found)");
+        }
+        ui.showLine();
+    }
 }
 
