@@ -1,5 +1,12 @@
 package Butler;
 
+/**
+ * The main entry point for the Butler chatbot application.
+ * <p>
+ * Butler manages a list of tasks (todos, deadlines, events) and allows
+ * users to add, mark, unmark, delete, list, and search tasks.
+ * Tasks are persisted to disk between runs.
+ */
 public class Butler {
     // ---------- Constants ----------
     private static final String FILE_PATH = "data/butler.txt";
@@ -29,6 +36,11 @@ public class Butler {
         }
     }
 
+    /**
+     * Constructs a new Butler instance.
+     *
+     * @param filePath the path to the file used to persist tasks
+     */
     public Butler(String filePath) {
         this.ui = new Ui();
         this.storage = new Storage(filePath);
@@ -42,6 +54,12 @@ public class Butler {
         this.tasks = loaded;
     }
 
+    /**
+     * Starts the main event loop of the chatbot.
+     * <p>
+     * Reads user commands, executes them, and displays results via {@link Ui}.
+     * Exits when the user issues the "bye" command.
+     */
     public void run() {
         ui.showWelcome();
         boolean isExit = false;
@@ -102,6 +120,7 @@ public class Butler {
     }
 
     // ---------- Command Handlers ----------
+    // (private helpers are intentionally not documented with Javadoc)
 
     private void handleTodo(String argsLine) throws ButlerException {
         Checks.ensureNonEmpty(argsLine.trim(), "Please tell me what the todo is about.");
@@ -182,6 +201,11 @@ public class Butler {
         tasks.find(argsLine.trim(), ui);
     }
 
+    /**
+     * Application entry point. Instantiates a {@link Butler} and starts it.
+     *
+     * @param args command line arguments (not used)
+     */
     public static void main(String[] args) {
         new Butler(FILE_PATH).run();
     }
