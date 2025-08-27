@@ -88,6 +88,16 @@ public class TaskList {
         ui.showLine();
     }
 
+    /**
+     * Finds and displays all tasks in the list that contain the given keyword
+     * in their description.
+     * <p>
+     * Matching tasks are numbered in the order they appear in the task list.
+     * If no tasks match, a message is displayed instead.
+     *
+     * @param keyword the keyword to search for in task descriptions
+     * @param ui      the user interface used for printing output
+     */
     public void find(String keyword, Ui ui) {
         ui.showLine();
         System.out.println(" Here are the matching tasks in your list:");
