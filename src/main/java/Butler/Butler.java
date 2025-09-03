@@ -1,7 +1,7 @@
 package Butler;
 
 /**
- * The main entry point for the Butler chatbot application.
+ * The main logic class for the Butler chatbot application.
  * <p>
  * Butler manages a list of tasks (todos, deadlines, events) and allows
  * users to add, mark, unmark, delete, list, and search tasks.
@@ -10,7 +10,6 @@ package Butler;
 public class Butler {
 
     // ---------- Collaborators ----------
-    private final MainWindow ui;
     private final Storage storage;
     private final TaskList tasks;
 
@@ -40,95 +39,89 @@ public class Butler {
      * @param filePath the path to the file used to persist tasks
      */
     public Butler(String filePath) {
-        this.ui = new MainWindow();
         this.storage = new Storage(filePath);
         TaskList loaded;
         try {
             loaded = new TaskList(storage.load());
         } catch (Exception e) {
-            ui.showError("Problem loading tasks, starting fresh.");
             loaded = new TaskList();
         }
         this.tasks = loaded;
     }
 
     /**
-     * Starts the main event loop of the chatbot.
+     * Processes a single user input and returns Butler's response as a string.
      * <p>
-     * Reads user commands, executes them, and displays results via {@link MainWindow}.
-     * Exits when the user issues the "bye" command.
+     * This replaces the old console-style event loop. Each call corresponds to
+     * exactly one user command → one response for the GUI.
+     *
+     * @param input the raw user command string
+     * @return Butler's response text
      */
-    public void run(String input) {
-        ui.showWelcome();
-        boolean isExit = false;
-        while (!isExit) {
-            try {
-                String fullCommand = input.trim();
-                if (fullCommand.isEmpty()) continue;
-
-                String[] parts = Parser.splitCommand(fullCommand);
-                Command cmd = Command.from(parts[0]);
-                String argsLine = parts[1];
-
-                switch (cmd) {
-                case BYE:
-                    ui.showMessage(" Bye. Hope to see you again soon!");
-                    isExit = true;
-                    break;
-
-                case LIST:
-                    tasks.printList(ui);
-                    break;
-
-                case MARK:
-                    handleMark(argsLine);
-                    break;
-
-                case UNMARK:
-                    handleUnmark(argsLine);
-                    break;
-
-                case TODO:
-                    handleTodo(argsLine);
-                    break;
-
-                case DEADLINE:
-                    handleDeadline(argsLine);
-                    break;
-
-                case EVENT:
-                    handleEvent(argsLine);
-                    break;
-
-                case DELETE:
-                    handleDelete(argsLine);
-                    break;
-
-                case FIND:
-                    handleFind(argsLine);
-                    break;
-
-                default:
-                    throw new ButlerException("Sorry, I don't recognize that command.");
-                }
-            } catch (ButlerException ex) {
-                ui.showError(ex.getMessage());
+    public String getResponse(String input) {
+        try {
+            String fullCommand = input.trim();
+            if (fullCommand.isEmpty()) {
+                return "";
             }
+
+            String[] parts = Parser.splitCommand(fullCommand);
+            Command cmd = Command.from(parts[0]);
+            String argsLine = parts[1];
+
+            switch (cmd) {
+            case BYE:
+                // Schedule app exit after 2 seconds (2000 ms)
+                javafx.animation.PauseTransition delay = new javafx.animation.
+                        PauseTransition(javafx.util.Duration.seconds(2));
+                delay.setOnFinished(event -> javafx.application.Platform.exit());
+                delay.play();
+                return "Bye. Hope to see you again soon!";
+
+            case LIST:
+                return buildListString();
+
+            case MARK:
+                return handleMark(argsLine);
+
+            case UNMARK:
+                return handleUnmark(argsLine);
+
+            case TODO:
+                return handleTodo(argsLine);
+
+            case DEADLINE:
+                return handleDeadline(argsLine);
+
+            case EVENT:
+                return handleEvent(argsLine);
+
+            case DELETE:
+                return handleDelete(argsLine);
+
+            case FIND:
+                return handleFind(argsLine);
+
+            default:
+                throw new ButlerException("Sorry, I don't recognize that command.");
+            }
+        } catch (ButlerException ex) {
+            return "⚠ " + ex.getMessage();
         }
     }
 
     // ---------- Command Handlers ----------
-    // (private helpers are intentionally not documented with Javadoc)
 
-    private void handleTodo(String argsLine) throws ButlerException {
+    private String handleTodo(String argsLine) throws ButlerException {
         Checks.ensureNonEmpty(argsLine.trim(), "Please tell me what the todo is about.");
         Task t = new Todo(argsLine.trim());
         tasks.add(t);
-        ui.printAdded(t, tasks.size());
         storage.save(tasks.all());
+        return "Got it. I've added this task:\n   " + t
+                + "\nNow you have " + tasks.size() + " tasks in the list.";
     }
 
-    private void handleDeadline(String argsLine) throws ButlerException {
+    private String handleDeadline(String argsLine) throws ButlerException {
         Checks.ensureContains(argsLine, " /by ", "A deadline needs a '/by <date>' part (yyyy-MM-dd).");
         String[] parts = Parser.splitOnce(argsLine, " /by ");
         String desc = parts[0].trim();
@@ -139,11 +132,12 @@ public class Butler {
 
         Task t = new Deadline(desc, by);
         tasks.add(t);
-        ui.printAdded(t, tasks.size());
         storage.save(tasks.all());
+        return "Got it. I've added this task:\n   " + t
+                + "\nNow you have " + tasks.size() + " tasks in the list.";
     }
 
-    private void handleEvent(String argsLine) throws ButlerException {
+    private String handleEvent(String argsLine) throws ButlerException {
         Checks.ensureContains(argsLine, " /from ", "An event needs '/from <start>' and '/to <end>'.");
         String[] p1 = Parser.splitOnce(argsLine, " /from ");
         String desc = p1[0].trim();
@@ -160,42 +154,68 @@ public class Butler {
 
         Task t = new Event(desc, from, to);
         tasks.add(t);
-        ui.printAdded(t, tasks.size());
         storage.save(tasks.all());
+        return "Got it. I've added this task:\n   " + t
+                + "\nNow you have " + tasks.size() + " tasks in the list.";
     }
 
-    private void handleMark(String argsLine) throws ButlerException {
+    private String handleMark(String argsLine) throws ButlerException {
         int idx = Checks.parseIndex(argsLine);
         Checks.ensureIndexInRange(idx, tasks.size(), "I can't find that task number.");
         Task t = tasks.get(idx - 1);
         t.mark();
-        ui.showMessage(" Nice! I've marked this task as done:", "   " + t);
         storage.save(tasks.all());
+        return "Nice! I've marked this task as done:\n   " + t;
     }
 
-    private void handleUnmark(String argsLine) throws ButlerException {
+    private String handleUnmark(String argsLine) throws ButlerException {
         int idx = Checks.parseIndex(argsLine);
         Checks.ensureIndexInRange(idx, tasks.size(), "That task number is not in the list.");
         Task t = tasks.get(idx - 1);
         t.unmark();
-        ui.showMessage(" OK, I've marked this task as not done yet:", "   " + t);
         storage.save(tasks.all());
+        return "OK, I've marked this task as not done yet:\n   " + t;
     }
 
-    private void handleDelete(String argsLine) throws ButlerException {
+    private String handleDelete(String argsLine) throws ButlerException {
         int idx = Checks.parseIndex(argsLine);
         Checks.ensureIndexInRange(idx, tasks.size(), "That task number is not in the list.");
         Task removed = tasks.remove(idx - 1);
-        ui.showMessage(
-                " Noted. I've removed this task:",
-                "   " + removed,
-                " Now you have " + tasks.size() + " tasks in the list."
-        );
         storage.save(tasks.all());
+        return "Noted. I've removed this task:\n   " + removed
+                + "\nNow you have " + tasks.size() + " tasks in the list.";
     }
 
-    private void handleFind(String argsLine) throws ButlerException {
+    private String handleFind(String argsLine) throws ButlerException {
         Checks.ensureNonEmpty(argsLine, "Please provide a keyword to search.");
-        tasks.find(argsLine.trim(), ui);
+        return buildFindString(argsLine.trim());
+    }
+
+    // ---------- Helpers for LIST / FIND ----------
+
+    private String buildListString() {
+        if (tasks.size() == 0) {
+            return "Your task list is empty.";
+        }
+        StringBuilder sb = new StringBuilder("Here are the tasks in your list:\n");
+        for (int i = 0; i < tasks.size(); i++) {
+            sb.append(" ").append(i + 1).append(".").append(tasks.get(i)).append("\n");
+        }
+        return sb.toString().trim();
+    }
+
+    private String buildFindString(String keyword) {
+        StringBuilder sb = new StringBuilder("Here are the matching tasks in your list:\n");
+        int count = 0;
+        for (Task t : tasks.all()) {
+            if (t.description.contains(keyword)) {
+                count++;
+                sb.append(" ").append(count).append(".").append(t).append("\n");
+            }
+        }
+        if (count == 0) {
+            sb.append(" (no matching tasks found)\n");
+        }
+        return sb.toString().trim();
     }
 }
