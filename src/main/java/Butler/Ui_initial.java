@@ -8,7 +8,7 @@ import java.util.Scanner;
  * The {@code Ui} class is responsible for displaying messages,
  * errors, task information, and reading user input from the console.
  */
-public class Ui {
+public class Ui_initial {
     private final Scanner sc;
 
     /**

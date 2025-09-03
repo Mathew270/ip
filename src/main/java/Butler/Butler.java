@@ -8,11 +8,9 @@ package Butler;
  * Tasks are persisted to disk between runs.
  */
 public class Butler {
-    // ---------- Constants ----------
-    private static final String FILE_PATH = "data/butler.txt";
 
     // ---------- Collaborators ----------
-    private final Ui ui;
+    private final MainWindow ui;
     private final Storage storage;
     private final TaskList tasks;
 
@@ -42,7 +40,7 @@ public class Butler {
      * @param filePath the path to the file used to persist tasks
      */
     public Butler(String filePath) {
-        this.ui = new Ui();
+        this.ui = new MainWindow();
         this.storage = new Storage(filePath);
         TaskList loaded;
         try {
@@ -57,15 +55,15 @@ public class Butler {
     /**
      * Starts the main event loop of the chatbot.
      * <p>
-     * Reads user commands, executes them, and displays results via {@link Ui}.
+     * Reads user commands, executes them, and displays results via {@link MainWindow}.
      * Exits when the user issues the "bye" command.
      */
-    public void run() {
+    public void run(String input) {
         ui.showWelcome();
         boolean isExit = false;
         while (!isExit) {
             try {
-                String fullCommand = ui.readCommand().trim();
+                String fullCommand = input.trim();
                 if (fullCommand.isEmpty()) continue;
 
                 String[] parts = Parser.splitCommand(fullCommand);
@@ -199,14 +197,5 @@ public class Butler {
     private void handleFind(String argsLine) throws ButlerException {
         Checks.ensureNonEmpty(argsLine, "Please provide a keyword to search.");
         tasks.find(argsLine.trim(), ui);
-    }
-
-    /**
-     * Application entry point. Instantiates a {@link Butler} and starts it.
-     *
-     * @param args command line arguments (not used)
-     */
-    public static void main(String[] args) {
-        new Butler(FILE_PATH).run();
     }
 }
