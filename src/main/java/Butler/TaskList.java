@@ -75,43 +75,49 @@ public class TaskList {
     }
 
     /**
-     * Prints all tasks in the list with numbering, formatted through the given {@link Ui}.
+     * Displays the full list of tasks in the user interface.
+     * <p>
+     * This method constructs a numbered list of all tasks currently stored
+     * in the {@code TaskList} and passes the formatted output to the given
+     * {@link MainWindow} instance for rendering in the GUI.
      *
-     * @param ui the user interface for showing divider lines
+     * @param ui the {@link MainWindow} responsible for displaying the task list
      */
-    public void printList(Ui ui) {
-        ui.showLine();
-        System.out.println(" Here are the tasks in your list:");
+    public void printList(MainWindow ui) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Here are the tasks in your list:\n");
         for (int i = 0; i < tasks.size(); i++) {
-            System.out.println(" " + (i + 1) + "." + tasks.get(i));
+            sb.append(" ").append(i + 1).append(".").append(tasks.get(i)).append("\n");
         }
-        ui.showLine();
+        ui.showTaskList(sb.toString().trim());
     }
 
     /**
-     * Finds and displays all tasks in the list that contain the given keyword
-     * in their description.
+     * Searches for tasks whose description contains the given keyword
+     * and displays the results in the user interface.
      * <p>
      * Matching tasks are numbered in the order they appear in the task list.
-     * If no tasks match, a message is displayed instead.
+     * If no matches are found, a message indicating this is shown instead.
+     * The formatted output is passed to the given {@link MainWindow} instance
+     * for rendering in the GUI.
      *
-     * @param keyword the keyword to search for in task descriptions
-     * @param ui      the user interface used for printing output
+     * @param keyword the keyword to search for within each task description
+     * @param ui      the {@link MainWindow} responsible for displaying the results
      */
-    public void find(String keyword, Ui ui) {
-        ui.showLine();
-        System.out.println(" Here are the matching tasks in your list:");
+    public void find(String keyword, MainWindow ui) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Here are the matching tasks in your list:\n");
         int count = 0;
         for (int i = 0; i < tasks.size(); i++) {
             Task t = tasks.get(i);
             if (t.description.contains(keyword)) {
                 count++;
-                System.out.println(" " + count + "." + t);
+                sb.append(" ").append(count).append(".").append(t).append("\n");
             }
         }
         if (count == 0) {
-            System.out.println(" (no matching tasks found)");
+            sb.append(" (no matching tasks found)\n");
         }
-        ui.showLine();
+        ui.showTaskSearch(sb.toString().trim());
     }
 }
