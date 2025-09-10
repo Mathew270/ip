@@ -12,6 +12,11 @@ import java.time.format.DateTimeParseException;
  */
 public class Parser {
 
+    /** Public delimiters to keep consistency across classes. */
+    public static final String DELIM_BY   = "/by ";
+    public static final String DELIM_FROM = "/from ";
+    public static final String DELIM_TO   = "/to ";
+
     /** Date-time patterns (avoid magic strings). */
     private static final DateTimeFormatter F_YYYY_MM_DD_HHMM =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HHmm");
@@ -39,15 +44,6 @@ public class Parser {
 
     /**
      * Splits a string into two parts at the first occurrence of the given delimiter.
-     * <p>
-     * For example, calling
-     * <pre>
-     * splitOnce("deadline return book /by 2019-10-15", " /by ")
-     * </pre>
-     * returns:
-     * <pre>
-     * ["deadline return book", "2019-10-15"]
-     * </pre>
      *
      * @param s     the string to split
      * @param delim the delimiter at which to split

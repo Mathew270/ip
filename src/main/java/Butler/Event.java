@@ -3,21 +3,18 @@ package Butler;
 import java.time.LocalDateTime;
 
 /**
- * Represents an event task that spans a specific start and end date/time.
- * <p>
- * An {@code Event} has a description, a start time, and an end time.
- * It extends the {@link Task} base class.
+ * A task that represents an event with a start and end date-time.
  */
 public class Event extends Task {
-    private final LocalDateTime from;
-    private final LocalDateTime to;
+    private LocalDateTime from;
+    private LocalDateTime to;
 
     /**
-     * Constructs an {@code Event} task with the given description, start time, and end time.
+     * Creates an event task.
      *
-     * @param description the description of the event
-     * @param from        the starting date and time of the event
-     * @param to          the ending date and time of the event
+     * @param description the event description
+     * @param from the start date-time
+     * @param to the end date-time
      */
     public Event(String description, LocalDateTime from, LocalDateTime to) {
         super(description);
@@ -27,74 +24,82 @@ public class Event extends Task {
         this.to = to;
     }
 
-    /**
-     * Returns the starting date and time of the event.
-     *
-     * @return the {@link LocalDateTime} when the event begins
-     */
+    /** Returns the start date-time. */
     public LocalDateTime getFrom() {
         return from;
     }
 
-    /**
-     * Returns the ending date and time of the event.
-     *
-     * @return the {@link LocalDateTime} when the event ends
-     */
+    /** Returns the end date-time. */
     public LocalDateTime getTo() {
         return to;
     }
 
     /**
-     * Returns the icon representing this task type.
+     * Updates the start and end date-times of the event.
      *
-     * @return the string {@code "[E]"} for events
+     * @param newFrom the new start date-time
+     * @param newTo the new end date-time
      */
+    public void setSchedule(LocalDateTime newFrom, LocalDateTime newTo) {
+        assert newFrom != null && newTo != null : "event times must not be null";
+        assert !newTo.isBefore(newFrom) : "event end must not be before start";
+        this.from = newFrom;
+        this.to = newTo;
+    }
+
+    /**
+     * Reschedules this event using {@code /from <start> /to <end>}.
+     *
+     * @param argsLine the argument string after the task index
+     * @throws ButlerException if the arguments are invalid
+     */
+    @Override
+    public void reschedule(String argsLine) throws ButlerException {
+        String s = argsLine == null ? "" : argsLine.trim();
+
+        // Accept "/from ... /to ..." or "... /from ... /to ..."
+        String afterFrom;
+        if (s.startsWith(Parser.DELIM_FROM)) {
+            afterFrom = s.substring(Parser.DELIM_FROM.length());
+        } else if (s.contains(Parser.DELIM_FROM)) {
+            String[] p1 = Parser.splitOnce(s, Parser.DELIM_FROM);
+            afterFrom = p1[1];
+        } else {
+            throw new ButlerException("Use '/from <start> /to <end>' to set new times.");
+        }
+
+        if (!afterFrom.contains(Parser.DELIM_TO)) {
+            throw new ButlerException("Please include the end time using '/to <end>'.");
+        }
+        String[] p2 = Parser.splitOnce(afterFrom, Parser.DELIM_TO);
+        var newFrom = Parser.parseLocalDateTime(p2[0].trim());
+        var newTo   = Parser.parseLocalDateTime(p2[1].trim());
+        assert newFrom != null && newTo != null : "event times must not be null";
+        assert !newTo.isBefore(newFrom) : "event end must not be before start";
+        setSchedule(newFrom, newTo);
+    }
+
     @Override
     public String typeIcon() {
         return "[E]";
     }
 
-    /**
-     * Returns the code used to identify this task type in storage.
-     *
-     * @return the string {@code "E"} for events
-     */
     @Override
     public String typeCode() {
         return "E";
     }
 
-    /**
-     * Serializes this event task into a storable string format.
-     * <p>
-     * Format: {@code E|<doneFlag>|<description>|<from>|<to>}
-     * where {@code <from>} and {@code <to>} are stored in ISO-8601
-     * (via {@link LocalDateTime#toString()}).
-     *
-     * @return the serialized representation of this event
-     */
     @Override
     public String serialize() {
-        return String.join("|",
-                typeCode(),
-                isDone ? "1" : "0",
-                description,
-                from.toString(),
-                to.toString()
-        );
+        // E|done|desc|fromISO|toISO
+        String doneFlag = isDone ? "1" : "0";
+        return String.join("|", "E", doneFlag, description, from.toString(), to.toString());
     }
 
-    /**
-     * Returns a string representation of this event task,
-     * including its description, status, and formatted start and end times.
-     *
-     * @return the string representation of this event
-     */
     @Override
     public String toString() {
         return typeIcon() + statusIcon() + " " + description
-                + " (from: " + from.format(DISPLAY_DATETIME)
-                + " to: " + to.format(DISPLAY_DATETIME) + ")";
+                + " (from: " + DISPLAY_DATETIME.format(from)
+                + ", to: "   + DISPLAY_DATETIME.format(to) + ")";
     }
 }

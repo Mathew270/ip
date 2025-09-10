@@ -13,15 +13,12 @@ public class Butler {
     private final Storage storage;
     private final TaskList tasks;
 
-    // ---------- Delimiters / timings (avoid magic strings/numbers) ----------
-    private static final String DELIM_BY = " /by ";
-    private static final String DELIM_FROM = " /from ";
-    private static final String DELIM_TO = " /to ";
+    // ---------- Timings ----------
     private static final int EXIT_DELAY_SECONDS = 2;
 
     // ---------- Commands Enum ----------
     private enum Command {
-        BYE, LIST, MARK, UNMARK, TODO, DEADLINE, EVENT, DELETE, FIND, UNKNOWN;
+        BYE, LIST, MARK, UNMARK, TODO, DEADLINE, EVENT, DELETE, FIND, RESCHEDULE, UNKNOWN;
 
         static Command from(String s) {
             switch (s) {
@@ -34,6 +31,7 @@ public class Butler {
             case "event": return EVENT;
             case "delete": return DELETE;
             case "find": return FIND;
+            case "reschedule": return RESCHEDULE;
             default: return UNKNOWN;
             }
         }
@@ -108,6 +106,9 @@ public class Butler {
             case FIND:
                 return handleFind(argsLine);
 
+            case RESCHEDULE:
+                return handleReschedule(argsLine);
+
             default:
                 throw new ButlerException("Sorry, I don't recognize that command.");
             }
@@ -127,8 +128,8 @@ public class Butler {
     }
 
     private String handleDeadline(String argsLine) throws ButlerException {
-        Checks.ensureContains(argsLine, DELIM_BY, "A deadline needs a '/by <date>' part (yyyy-MM-dd).");
-        String[] parts = Parser.splitOnce(argsLine, DELIM_BY);
+        Checks.ensureContains(argsLine, Parser.DELIM_BY, "A deadline needs a '/by <date>' part (yyyy-MM-dd).");
+        String[] parts = Parser.splitOnce(argsLine, Parser.DELIM_BY);
         String desc = parts[0].trim();
         String byRaw = parts[1].trim();
 
@@ -142,13 +143,13 @@ public class Butler {
     }
 
     private String handleEvent(String argsLine) throws ButlerException {
-        Checks.ensureContains(argsLine, DELIM_FROM, "An event needs '/from <start>' and '/to <end>'.");
-        String[] p1 = Parser.splitOnce(argsLine, DELIM_FROM);
+        Checks.ensureContains(argsLine, Parser.DELIM_FROM, "An event needs '/from <start>' and '/to <end>'.");
+        String[] p1 = Parser.splitOnce(argsLine, Parser.DELIM_FROM);
         String desc = p1[0].trim();
         String afterFrom = p1[1];
 
-        Checks.ensureContains(afterFrom, DELIM_TO, "Please include the end time using '/to <end>'.");
-        String[] p2 = Parser.splitOnce(afterFrom, DELIM_TO);
+        Checks.ensureContains(afterFrom, Parser.DELIM_TO, "Please include the end time using '/to <end>'.");
+        String[] p2 = Parser.splitOnce(afterFrom, Parser.DELIM_TO);
         String fromRaw = p2[0].trim();
         String toRaw = p2[1].trim();
 
@@ -198,6 +199,30 @@ public class Butler {
         return buildFindString(argsLine.trim());
     }
 
+    /**
+     * Reschedules a task by index.
+     * <p>
+     * Usage:
+     * <ul>
+     *   <li>Deadline: {@code reschedule 3 /by 2025-11-01}</li>
+     *   <li>Event: {@code reschedule 2 /from 2025-11-01 0900 /to 2025-11-01 1100}</li>
+     * </ul>
+     */
+    private String handleReschedule(String argsLine) throws ButlerException {
+        String[] p = Parser.splitCommand(argsLine.trim());
+        Checks.ensureNonEmpty(p[0], "Please provide the task number to reschedule.");
+        int idx = Checks.parseIndex(p[0]);
+        Checks.ensureIndexInRange(idx, tasks.size(), "That task number is not in the list.");
+        Task t = tasks.get(idx - 1);
+        String rest = p.length > 1 ? p[1].trim() : "";
+
+        // Polymorphic reschedule: no instanceof
+        t.reschedule(rest);
+
+        storage.save(tasks.all());
+        return "Updated task:\n   " + t;
+    }
+
     // ---------- Helpers for LIST / FIND ----------
 
     private String buildListString() {
@@ -224,7 +249,7 @@ public class Butler {
         return sb.toString().trim();
     }
 
-    // ---------- Small helpers for SLAP ----------
+    // ---------- Small helpers ----------
 
     /**
      * Schedules app exit after 2 seconds (2000 ms).

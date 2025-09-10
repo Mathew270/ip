@@ -35,79 +35,55 @@ public abstract class Task {
         this.isDone = false;
     }
 
-    /**
-     * Marks this task as done.
-     */
+    /** Marks this task as done. */
     public void mark() {
         this.isDone = true;
     }
 
-    /**
-     * Marks this task as not done.
-     */
+    /** Marks this task as not done. */
     public void unmark() {
         this.isDone = false;
     }
 
-    /**
-     * Returns the icon representing the done/not-done status.
-     *
-     * @return {@code "[X]"} if done, {@code "[ ]"} otherwise
-     */
+    /** Returns the icon representing the done/not-done status. */
     protected String statusIcon() {
         return isDone ? "[X]" : "[ ]";
     }
 
-    /**
-     * Returns whether this task is marked as done.
-     *
-     * @return {@code true} if done, {@code false} otherwise
-     */
+    /** Returns whether this task is marked as done. */
     public boolean isDone() {
         return isDone;
     }
 
-    /**
-     * Returns the description of this task.
-     *
-     * @return the task description
-     */
+    /** Returns the description of this task. */
     public String getDescription() {
         return description;
     }
 
     // ---- Polymorphic hooks for subclasses ----
 
-    /**
-     * Returns the icon representing this task type.
-     * For example: {@code "[T]"} for todos, {@code "[D]"} for deadlines.
-     *
-     * @return the string icon representing the type
-     */
+    /** Returns the icon representing this task type. */
     public abstract String typeIcon();
 
-    /**
-     * Returns the short code used to identify this task type in storage.
-     * For example: {@code "T"} for todos, {@code "D"} for deadlines.
-     *
-     * @return the type code string
-     */
+    /** Returns the short code used to identify this task type in storage. */
     public abstract String typeCode();
 
-    /**
-     * Serializes this task into a storable string format.
-     * Subclasses define their own specific serialization format.
-     *
-     * @return the serialized representation of this task
-     */
+    /** Serializes this task into a storable string format. */
     public abstract String serialize();
 
     /**
-     * Returns a string representation of this task,
-     * including its type, status, and description.
+     * Reschedules this task using a task-specific argument format.
+     * <p>
+     * Default implementation: this task is not reschedulable.
      *
-     * @return the string representation of this task
+     * @param argsLine the argument string after the task index
+     * @throws ButlerException if rescheduling is unsupported or arguments are invalid
      */
+    public void reschedule(String argsLine) throws ButlerException {
+        throw new ButlerException("This task has no date/time to reschedule.");
+    }
+
+    /** String representation including type, status, and description. */
     @Override
     public String toString() {
         return typeIcon() + statusIcon() + " " + description;
