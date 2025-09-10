@@ -13,6 +13,12 @@ public class Butler {
     private final Storage storage;
     private final TaskList tasks;
 
+    // ---------- Delimiters / timings (avoid magic strings/numbers) ----------
+    private static final String DELIM_BY = " /by ";
+    private static final String DELIM_FROM = " /from ";
+    private static final String DELIM_TO = " /to ";
+    private static final int EXIT_DELAY_SECONDS = 2;
+
     // ---------- Commands Enum ----------
     private enum Command {
         BYE, LIST, MARK, UNMARK, TODO, DEADLINE, EVENT, DELETE, FIND, UNKNOWN;
@@ -48,6 +54,7 @@ public class Butler {
             loaded = new TaskList();
         }
         this.tasks = loaded;
+        assert this.tasks != null : "tasks must be initialized";
     }
 
     /**
@@ -61,22 +68,20 @@ public class Butler {
      */
     public String getResponse(String input) {
         try {
+            assert input != null : "input must not be null";
             String fullCommand = input.trim();
             if (fullCommand.isEmpty()) {
                 return "";
             }
 
             String[] parts = Parser.splitCommand(fullCommand);
+            assert parts.length == 2 : "splitCommand must return [cmd, args]";
             Command cmd = Command.from(parts[0]);
             String argsLine = parts[1];
 
             switch (cmd) {
             case BYE:
-                // Schedule app exit after 2 seconds (2000 ms)
-                javafx.animation.PauseTransition delay = new javafx.animation.
-                        PauseTransition(javafx.util.Duration.seconds(2));
-                delay.setOnFinished(event -> javafx.application.Platform.exit());
-                delay.play();
+                scheduleExit();
                 return "Bye. Hope to see you again soon!";
 
             case LIST:
@@ -118,13 +123,12 @@ public class Butler {
         Task t = new Todo(argsLine.trim());
         tasks.add(t);
         storage.save(tasks.all());
-        return "Got it. I've added this task:\n   " + t
-                + "\nNow you have " + tasks.size() + " tasks in the list.";
+        return formatAddMessage(t);
     }
 
     private String handleDeadline(String argsLine) throws ButlerException {
-        Checks.ensureContains(argsLine, " /by ", "A deadline needs a '/by <date>' part (yyyy-MM-dd).");
-        String[] parts = Parser.splitOnce(argsLine, " /by ");
+        Checks.ensureContains(argsLine, DELIM_BY, "A deadline needs a '/by <date>' part (yyyy-MM-dd).");
+        String[] parts = Parser.splitOnce(argsLine, DELIM_BY);
         String desc = parts[0].trim();
         String byRaw = parts[1].trim();
 
@@ -134,35 +138,36 @@ public class Butler {
         Task t = new Deadline(desc, by);
         tasks.add(t);
         storage.save(tasks.all());
-        return "Got it. I've added this task:\n   " + t
-                + "\nNow you have " + tasks.size() + " tasks in the list.";
+        return formatAddMessage(t);
     }
 
     private String handleEvent(String argsLine) throws ButlerException {
-        Checks.ensureContains(argsLine, " /from ", "An event needs '/from <start>' and '/to <end>'.");
-        String[] p1 = Parser.splitOnce(argsLine, " /from ");
+        Checks.ensureContains(argsLine, DELIM_FROM, "An event needs '/from <start>' and '/to <end>'.");
+        String[] p1 = Parser.splitOnce(argsLine, DELIM_FROM);
         String desc = p1[0].trim();
         String afterFrom = p1[1];
 
-        Checks.ensureContains(afterFrom, " /to ", "Please include the end time using '/to <end>'.");
-        String[] p2 = Parser.splitOnce(afterFrom, " /to ");
+        Checks.ensureContains(afterFrom, DELIM_TO, "Please include the end time using '/to <end>'.");
+        String[] p2 = Parser.splitOnce(afterFrom, DELIM_TO);
         String fromRaw = p2[0].trim();
         String toRaw = p2[1].trim();
 
         Checks.ensureNonEmpty(desc, "Event description cannot be empty.");
         var from = Parser.parseLocalDateTime(fromRaw);
         var to   = Parser.parseLocalDateTime(toRaw);
+        assert from != null && to != null : "event times must not be null";
+        assert !to.isBefore(from) : "event end must not be before start";
 
         Task t = new Event(desc, from, to);
         tasks.add(t);
         storage.save(tasks.all());
-        return "Got it. I've added this task:\n   " + t
-                + "\nNow you have " + tasks.size() + " tasks in the list.";
+        return formatAddMessage(t);
     }
 
     private String handleMark(String argsLine) throws ButlerException {
         int idx = Checks.parseIndex(argsLine);
         Checks.ensureIndexInRange(idx, tasks.size(), "I can't find that task number.");
+        assert idx >= 1 && idx <= tasks.size() : "index must be within 1..size";
         Task t = tasks.get(idx - 1);
         t.mark();
         storage.save(tasks.all());
@@ -172,6 +177,7 @@ public class Butler {
     private String handleUnmark(String argsLine) throws ButlerException {
         int idx = Checks.parseIndex(argsLine);
         Checks.ensureIndexInRange(idx, tasks.size(), "That task number is not in the list.");
+        assert idx >= 1 && idx <= tasks.size() : "index must be within 1..size";
         Task t = tasks.get(idx - 1);
         t.unmark();
         storage.save(tasks.all());
@@ -195,7 +201,7 @@ public class Butler {
     // ---------- Helpers for LIST / FIND ----------
 
     private String buildListString() {
-        if (tasks.size() == 0) {
+        if (tasks.isEmpty()) {
             return "Your task list is empty.";
         }
         StringBuilder sb = new StringBuilder("Here are the tasks in your list:\n");
@@ -208,15 +214,34 @@ public class Butler {
     private String buildFindString(String keyword) {
         StringBuilder sb = new StringBuilder("Here are the matching tasks in your list:\n");
         int count = 0;
-        for (Task t : tasks.all()) {
-            if (t.description.contains(keyword)) {
-                count++;
-                sb.append(" ").append(count).append(".").append(t).append("\n");
-            }
+        for (Task t : tasks.findByDescriptionContains(keyword)) {
+            count++;
+            sb.append(" ").append(count).append(".").append(t).append("\n");
         }
         if (count == 0) {
             sb.append(" (no matching tasks found)\n");
         }
         return sb.toString().trim();
+    }
+
+    // ---------- Small helpers for SLAP ----------
+
+    /**
+     * Schedules app exit after 2 seconds (2000 ms).
+     * Extracted to keep the happy path clear.
+     */
+    private void scheduleExit() {
+        javafx.animation.PauseTransition delay =
+                new javafx.animation.PauseTransition(javafx.util.Duration.seconds(EXIT_DELAY_SECONDS));
+        delay.setOnFinished(event -> javafx.application.Platform.exit());
+        delay.play();
+    }
+
+    /**
+     * Formats a consistent "task added" message.
+     */
+    private String formatAddMessage(Task t) {
+        return "Got it. I've added this task:\n   " + t
+                + "\nNow you have " + tasks.size() + " tasks in the list.";
     }
 }

@@ -33,6 +33,7 @@ public class TaskList {
      * @param t the task to add
      */
     public void add(Task t) {
+        assert t != null : "cannot add null task";
         tasks.add(t);
     }
 
@@ -43,6 +44,7 @@ public class TaskList {
      * @return the task at that index
      */
     public Task get(int idx) {
+        assert idx >= 0 && idx < tasks.size() : "index out of bounds for get";
         return tasks.get(idx);
     }
 
@@ -53,6 +55,7 @@ public class TaskList {
      * @return the task that was removed
      */
     public Task remove(int idx) {
+        assert idx >= 0 && idx < tasks.size() : "index out of bounds for remove";
         return tasks.remove(idx);
     }
 
@@ -66,12 +69,39 @@ public class TaskList {
     }
 
     /**
+     * Returns whether the list has no tasks.
+     *
+     * @return true if empty, false otherwise
+     */
+    public boolean isEmpty() {
+        return tasks.isEmpty();
+    }
+
+    /**
      * Returns the underlying list of tasks.
      *
      * @return all tasks in this task list
      */
     public ArrayList<Task> all() {
         return tasks;
+    }
+
+    /**
+     * Returns tasks whose description contains the given keyword.
+     * This is a pure query (no UI), so callers can format the output
+     * themselves. Keeps search logic in one place.
+     *
+     * @param keyword substring to match (case-sensitive)
+     * @return a new {@link ArrayList} of matching tasks
+     */
+    public ArrayList<Task> findByDescriptionContains(String keyword) {
+        ArrayList<Task> matches = new ArrayList<>();
+        for (Task t : tasks) {
+            if (t != null && t.getDescription().contains(keyword)) {
+                matches.add(t);
+            }
+        }
+        return matches;
     }
 
     /**
@@ -108,12 +138,9 @@ public class TaskList {
         StringBuilder sb = new StringBuilder();
         sb.append("Here are the matching tasks in your list:\n");
         int count = 0;
-        for (int i = 0; i < tasks.size(); i++) {
-            Task t = tasks.get(i);
-            if (t.description.contains(keyword)) {
-                count++;
-                sb.append(" ").append(count).append(".").append(t).append("\n");
-            }
+        for (Task t : findByDescriptionContains(keyword)) {
+            count++;
+            sb.append(" ").append(count).append(".").append(t).append("\n");
         }
         if (count == 0) {
             sb.append(" (no matching tasks found)\n");

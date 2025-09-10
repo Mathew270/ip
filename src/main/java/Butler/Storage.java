@@ -27,6 +27,12 @@ import java.util.List;
 public class Storage {
     private final Path dataPath;
 
+    // ---------- Storage format specifics (avoid magic) ----------
+    private static final String DELIM_REGEX = "\\s*\\|\\s*";
+    private static final String TYPE_TODO = "T";
+    private static final String TYPE_DEADLINE = "D";
+    private static final String TYPE_EVENT = "E";
+
     /**
      * Constructs a {@code Storage} object with the specified file path.
      *
@@ -34,6 +40,7 @@ public class Storage {
      *                 e.g. {@code "data/butler.txt"}
      */
     public Storage(String filePath) {
+        assert filePath != null && !filePath.isBlank() : "filePath must be non-null and non-blank";
         this.dataPath = Paths.get(filePath); // e.g., "data/butler.txt"
     }
 
@@ -48,45 +55,18 @@ public class Storage {
     public ArrayList<Task> load() {
         ArrayList<Task> loaded = new ArrayList<>();
         try {
-            Files.createDirectories(dataPath.getParent());
+            assert dataPath != null : "dataPath must not be null";
+            if (dataPath.getParent() != null) {
+                Files.createDirectories(dataPath.getParent());
+            }
             if (!Files.exists(dataPath)) return loaded;
 
             List<String> lines = Files.readAllLines(dataPath, StandardCharsets.UTF_8);
             for (String raw : lines) {
-                String line = raw.trim();
-                if (line.isEmpty()) continue;
-
-                String[] p = line.split("\\s*\\|\\s*");
-                if (p.length < 3) continue; // skip malformed lines
-
-                String type = p[0];
-                boolean done = "1".equals(p[1]);
-
-                Task t = null;
-                switch (type) {
-                case "T": {
-                    // T|done|desc
-                    t = new Todo(p[2]);
-                    break;
+                Task t = parseLineToTask(raw);
+                if (t != null) {
+                    loaded.add(t);
                 }
-                case "D": {
-                    // D|done|desc|yyyy-MM-dd
-                    LocalDate by = LocalDate.parse(p[3]);
-                    t = new Deadline(p[2], by);
-                    break;
-                }
-                case "E": {
-                    // E|done|desc|fromISO|toISO
-                    LocalDateTime from = LocalDateTime.parse(p[3]);
-                    LocalDateTime to   = LocalDateTime.parse(p[4]);
-                    t = new Event(p[2], from, to);
-                    break;
-                }
-                default:
-                    // unknown type -> skip line
-                }
-                if (t != null && done) t.mark();
-                if (t != null) loaded.add(t);
             }
         } catch (IOException e) {
             // ignore -> start with empty list
@@ -108,13 +88,73 @@ public class Storage {
         assert tasks != null : "tasks list to save must not be null";
         List<String> out = new ArrayList<>();
         for (Task t : tasks) {
-            out.add(t.serialize());  // polymorphic, no instanceof
+            if (t != null) out.add(t.serialize());  // polymorphic, no instanceof
         }
         try {
-            Files.createDirectories(dataPath.getParent());
+            if (dataPath.getParent() != null) {
+                Files.createDirectories(dataPath.getParent());
+            }
             Files.write(dataPath, out, StandardCharsets.UTF_8);
         } catch (IOException e) {
             // ignore write errors for now
         }
+    }
+
+    // ---------- Helpers ----------
+
+    /**
+     * Parses one serialized line into a Task, or returns null if malformed/unknown.
+     * <p>
+     * Expected formats:
+     * <pre>
+     * T|done|desc
+     * D|done|desc|yyyy-MM-dd
+     * E|done|desc|fromISO|toISO
+     * </pre>
+     *
+     * @param raw the raw line read from storage
+     * @return a Task instance or null if the line cannot be parsed
+     */
+    private Task parseLineToTask(String raw) {
+        if (raw == null) return null;
+        String line = raw.trim();
+        if (line.isEmpty()) return null;
+
+        String[] p = line.split(DELIM_REGEX);
+        if (p.length < 3) return null; // skip malformed
+
+        String type = p[0];
+        boolean done = "1".equals(p[1]);
+
+        Task t = null;
+        switch (type) {
+        case TYPE_TODO: {
+            // T|done|desc
+            t = new Todo(p[2]);
+            break;
+        }
+        case TYPE_DEADLINE: {
+            // D|done|desc|yyyy-MM-dd
+            if (p.length >= 4) {
+                LocalDate by = LocalDate.parse(p[3]);
+                t = new Deadline(p[2], by);
+            }
+            break;
+        }
+        case TYPE_EVENT: {
+            // E|done|desc|fromISO|toISO
+            if (p.length >= 5) {
+                LocalDateTime from = LocalDateTime.parse(p[3]);
+                LocalDateTime to   = LocalDateTime.parse(p[4]);
+                assert !to.isBefore(from) : "Serialized event must not end before it starts";
+                t = new Event(p[2], from, to);
+            }
+            break;
+        }
+        default:
+            // unknown type -> skip
+        }
+        if (t != null && done) t.mark();
+        return t;
     }
 }
