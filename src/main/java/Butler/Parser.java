@@ -63,6 +63,7 @@ public class Parser {
      * @throws ButlerException if the string is not in the expected format
      */
     public static LocalDate parseLocalDate(String s) throws ButlerException {
+        assert s != null && !s.isBlank() : "date string must be non-null and non-blank";
         try {
             return LocalDate.parse(s); // yyyy-MM-dd
         } catch (DateTimeParseException e) {

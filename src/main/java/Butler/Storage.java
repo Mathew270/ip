@@ -105,6 +105,7 @@ public class Storage {
      * @param tasks the list of tasks to persist
      */
     public void save(List<Task> tasks) {
+        assert tasks != null : "tasks list to save must not be null";
         List<String> out = new ArrayList<>();
         for (Task t : tasks) {
             out.add(t.serialize());  // polymorphic, no instanceof

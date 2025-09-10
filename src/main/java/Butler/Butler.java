@@ -39,6 +39,7 @@ public class Butler {
      * @param filePath the path to the file used to persist tasks
      */
     public Butler(String filePath) {
+        assert filePath != null && !filePath.isBlank() : "filePath must be non-null and non-blank";
         this.storage = new Storage(filePath);
         TaskList loaded;
         try {
